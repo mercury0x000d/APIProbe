@@ -34,7 +34,7 @@ MemCompare:
 	;	Comparison length
 	;
 	;  output:
-	;	EDX - Result
+	;	DX - Result
 	;		true - the regions are identical
 	;		false - the regions are different
 
@@ -42,20 +42,20 @@ MemCompare:
 	mov bp, sp
 
 
-	mov esi, [bp + 8]
-	mov edi, [bp + 12]
-	mov ecx, [bp + 16]
+	mov si, [bp + 4]
+	mov di, [bp + 6]
+	mov cx, [bp + 8]
 
 	; set the result to possibly be changed if necessary later
-	mov edx, false
+	mov dx, false
 
-	cmp ecx, 0
+	cmp cx, 0
 	je .Exit
 
 	repe cmpsb
 	jnz .Exit
 
-	mov edx, true
+	mov dx, true
 
 
 	.Exit:
@@ -83,50 +83,50 @@ MemCopy:
 	mov bp, sp
 
 
-	mov esi, [bp + 8]
-	mov edi, [bp + 12]
-	mov ecx, [bp + 16]
+	mov si, [bp + 4]
+	mov di, [bp + 6]
+	mov cx, [bp + 8]
 
 	; to copy at top speed, we will break the copy operation into two parts
 	; first, we'll see how many multiples of 16 need transferred, and do those in 16-byte chunks
 
 	; divide by 8
-	shr ecx, 3
+	shr cx, 3
 
 	; make sure the loop doesn't get executed if the counter is zero
-	cmp ecx, 0
+	cmp cx, 0
 	je .ChunkLoopDone
 
 	; do the copy
 	.ChunkLoop:
 		; read 8 bytes in
-		mov eax, [esi]
-		add esi, 4
-		mov ebx, [esi]
-		add esi, 4
+		mov eax, [si]
+		add si, 4
+		mov ebx, [si]
+		add si, 4
 
 		; write them out
-		mov [edi], eax
-		add edi, 4
-		mov [edi], ebx
-		add edi, 4
+		mov [di], eax
+		add di, 4
+		mov [di], ebx
+		add di, 4
 	loop .ChunkLoop
 	.ChunkLoopDone:
 
 	; now restore the transfer amount
-	mov ecx, [bp + 16]
+	mov cx, [bp + 8]
 	; see how many bytes we have remaining
-	and ecx, 0x00000007
+	and cx, 0x00000007
 
 	; make sure the loop doesn't get executed if the counter is zero
-	cmp ecx, 0
+	cmp cx, 0
 	je .Exit
 
 	; and do the copy
 	.ByteLoop:
 		lodsb
-		mov byte [edi], al
-		inc edi	
+		mov byte [di], al
+		inc di	
 	loop .ByteLoop
 
 
@@ -155,18 +155,18 @@ MemFill:
 	mov bp, sp
 
 
-	mov esi, [bp + 8]
-	mov ecx, [bp + 12]
-	mov ebx, [bp + 16]
+	mov si, [bp + 4]
+	mov cx, [bp + 6]
+	mov bx, [bp + 8]
 
-	mov edi, esi
-	add edi, ecx
+	mov di, si
+	add di, cx
 
 	.FillLoop:
-		cmp esi, edi
+		cmp si, di
 		je .Exit
-		mov byte [esi], bl
-		inc esi
+		mov byte [si], bl
+		inc si
 	jmp .FillLoop
 
 

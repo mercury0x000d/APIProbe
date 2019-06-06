@@ -24,8 +24,81 @@ bits 16
 
 
 
+section .text
 Print:
 	; Prints the string specified
+	;
+	;  input:
+	;	String address
+	;
+	;  output:
+	;	n/a
+
+	push bp
+	mov bp, sp
+
+
+	mov ah, 0x09
+	mov dx, word [bp + 4]
+	int 0x21
+
+	call PrintCRLF
+
+	mov sp, bp
+	pop bp
+ret 2
+
+
+
+
+
+section .text
+PrintCRLF:
+	; Prints a blank line
+	push bp
+	mov bp, sp
+
+
+	mov ah, 0x09
+	mov dx, CRLF$
+	int 0x21
+
+
+	mov sp, bp
+	pop bp
+ret
+
+
+
+
+
+section .text
+PrintCRLF2:
+	; Prints two blank lines
+	push bp
+	mov bp, sp
+
+
+	mov ah, 0x09
+	mov dx, CRLF$
+	int 0x21
+
+	mov ah, 0x09
+	mov dx, CRLF$
+	int 0x21
+
+
+	mov sp, bp
+	pop bp
+ret
+
+
+
+
+
+section .text
+PrintNoCRLF:
+	; Prints the string specified without adding a CRLF at the end
 	;
 	;  input:
 	;	String address
@@ -50,48 +123,7 @@ ret 2
 
 
 
-PrintCRLF:
-	; Prints a blank line
-	push bp
-	mov bp, sp
-
-
-	mov ah, 0x09
-	mov dx, CRLF$
-	int 0x21
-
-
-	mov sp, bp
-	pop bp
-ret
-
-
-
-
-
-PrintCRLF2:
-	; Prints two blank lines
-	push bp
-	mov bp, sp
-
-
-	mov ah, 0x09
-	mov dx, CRLF$
-	int 0x21
-
-	mov ah, 0x09
-	mov dx, CRLF$
-	int 0x21
-
-
-	mov sp, bp
-	pop bp
-ret
-
-
-
-
-
+section .text
 PrintRegs:
 	; Quick register dump routine for real mode
 	;
@@ -214,5 +246,7 @@ PrintRegs:
 	mov sp, bp
 	pop bp
 ret
+
+section .data
 .output1$										db ' AX 0000    BX 0000    CX 0000    DX 0000 $'
 .output2$										db ' SI 0000    DI 0000    SP 0000    BP 0000 $'

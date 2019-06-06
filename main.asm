@@ -29,29 +29,13 @@ org 0x0100
 ; defines...
 %define true									1
 %define false									0
-%define BUILD 61
+%define BUILD 95
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+section .text
 main:
 	; introduce ourselves!
 	call PrintCRLF
@@ -59,8 +43,19 @@ main:
 	push .greeting1$
 	call Print
 
+	push 80
+	push temp$
 	push .greeting2$
+	call MemCopy
+
+	push word 3
+	push BUILD
+	push temp$
+	call StringTokenDecimal
+
+	push temp$
 	call Print
+
 
 
 	; start ye olde tests
@@ -69,6 +64,15 @@ main:
 
 	call PrintCRLF2
 	call Test0200
+
+	call PrintCRLF2
+	call Test0300
+
+	call PrintCRLF2
+	call Test0400
+
+	call PrintCRLF2
+	call Test0500
 
 ;	call PrintCRLF2
 ;	call Test1800
@@ -82,6 +86,9 @@ main:
 ;	call PrintCRLF2
 ;	call Test2000
 ;
+	call PrintCRLF2
+	call Test3000
+
 ;	call PrintCRLF2
 ;	call Test6100
 ;
@@ -96,18 +103,26 @@ main:
 	push .goodbye$
 	call Print
 ret
-.greeting1$										db 'APIProbe     DOS API Compatibility Tester', 0x0D, 0x0A, '$'
-.greeting2$										db 'v 1.0        Copyright 2019 by Mercury0x0D', 0x0D, 0x0A, '$'
-.goodbye$										db 'Testing complete.', 0x0D, 0x0A, '$'
+
+section .data
+.greeting1$										db 'APIProbe     DOS API Compatibility Tester$'
+.greeting2$										db '1.0.^      Copyright 2019 by Mercury0x0D$', 0
+.goodbye$										db 'Testing complete.$'
 
 
 
 
 
 ; globals...
+section .bss
+temp$											resb 80
+
+section .data
 CRLF$											db 0x0D, 0x0A, '$'
-msgTestFailed$									db 'Function testing failed', 0x0D, 0x0A, '$'
-msgTestPassed$									db 'Function testing passed', 0x0D, 0x0A, '$'
+msgTestFailed$									db 'Function testing failed$'
+msgTestPassed$									db 'Function testing passed$'
+msgDOSMayIntervene$								db 'You may see DOS intervene here if this device is unavailable.$'
+msgFunctionNotCounted$							db 'This function is not counted towards the compatibility totals.$'
 
 traitMSDOS110									dw 0x0000
 traitMSDOS111									dw 0x0000
@@ -164,11 +179,7 @@ traitFreeDOS									dw 0x0000
 
 
 
-
-
-
-
-
+section .text
 KeyboardBufferClear:
 	; Clears the keyboard buffer
 
@@ -190,6 +201,7 @@ ret
 
 
 
+section .text
 KeyboardBufferInsert:
 	; Inserts a character into the keyboard buffer
 	;
@@ -216,6 +228,7 @@ ret 2
 
 
 
+section .text
 Test0100:
 	push bp
 	mov bp, sp
@@ -279,14 +292,17 @@ Test0100:
 	mov sp, bp
 	pop bp
 ret
-.testing$										db 'Testing interrupt 0x21 AX = 0x0100 - Read char from STDIN with echo', 0x0D, 0x0A, '$'
-.msgFailInfo1$									db 'A key was returned when there should have been none.', 0x0D, 0x0A, '$'
-.msgFailInfo2$									db 'The key returned was not the one provided.', 0x0D, 0x0A, '$'
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x0100 - Read char from STDIN with echo$'
+.msgFailInfo1$									db 'A key was returned when there should have been none.$'
+.msgFailInfo2$									db 'The key returned was not the one provided.$'
 
 
 
 
 
+section .text
 Test0200:
 	push bp
 	mov bp, sp
@@ -424,19 +440,121 @@ Test0200:
 	mov sp, bp
 	pop bp
 ret
-.testing$										db 'Testing interrupt 0x21 AX = 0x0200 - Write character to STDOUT', 0x0D, 0x0A, '$'
-.msgPassInfo1$									db 'Although this function returns nothing officially, multiple DOS implementations', 0x0D, 0x0A, '$'
-.msgPassInfo2$									db '(at least MS-DOS 2.10 through 7.00) have been observed to contain the ASCII', 0x0D, 0x0A, '$'
-.msgPassInfo3$									db 'code in AL of the character printed, or ASCII code 32 for tabs.', 0x0D, 0x0A, '$'
-.msgPassChar$									db 'This DOS successfully exhibited this behaviour for regular characters.', 0x0D, 0x0A, '$'
-.msgPassTab$									db 'This DOS successfully exhibited this behaviour for tab characters.', 0x0D, 0x0A, '$'
-.msgFailChar$									db 'This DOS failed to exhibit this behaviour for regular characters.', 0x0D, 0x0A, '$'
-.msgFailTab$									db 'This DOS failed to exhibit this behaviour for tab characters.', 0x0D, 0x0A, '$'
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x0200 - Write character to STDOUT$'
+.msgPassInfo1$									db 'Although this function returns nothing officially, multiple DOS implementations$'
+.msgPassInfo2$									db '(at least MS-DOS 2.10 through 7.00) have been observed to contain the ASCII$'
+.msgPassInfo3$									db 'code in AL of the character printed, or ASCII code 32 for tabs.$'
+.msgPassChar$									db 'This DOS successfully exhibited this behaviour for regular characters.$'
+.msgPassTab$									db 'This DOS successfully exhibited this behaviour for tab characters.$'
+.msgFailChar$									db 'This DOS failed to exhibit this behaviour for regular characters.$'
+.msgFailTab$									db 'This DOS failed to exhibit this behaviour for tab characters.$'
 
 
 
 
 
+section .text
+Test0300:
+	push bp
+	mov bp, sp
+
+
+	push .testing$
+	call Print
+
+	push msgDOSMayIntervene$
+	call Print
+
+	push msgFunctionNotCounted$
+	call Print
+
+	; try the function
+	mov ax, 0x0300
+	int 0x21
+
+
+	.Exit:
+	mov sp, bp
+	pop bp
+ret
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x0300 - Read character from STDAUX$'
+.msgInfo1$										db 'This function attempts to read from the AUX device - usually the serial port.$'
+
+
+
+
+
+section .text
+Test0400:
+	push bp
+	mov bp, sp
+
+
+	push .testing$
+	call Print
+
+	push msgDOSMayIntervene$
+	call Print
+
+	push msgFunctionNotCounted$
+	call Print
+
+	; try the function
+	mov ax, 0x0400
+	int 0x21
+
+
+	.Exit:
+	mov sp, bp
+	pop bp
+ret
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x0400 - Write character to STDAUX$'
+.msgInfo1$										db 'This function attempts to write to the AUX device - usually the serial port.$'
+
+
+
+
+
+section .text
+Test0500:
+	push bp
+	mov bp, sp
+
+
+	push .testing$
+	call Print
+
+	push msgDOSMayIntervene$
+	call Print
+
+	push msgFunctionNotCounted$
+	call Print
+
+	; try the function
+	mov ax, 0x0500
+	int 0x21
+
+
+	.Exit:
+	mov sp, bp
+	pop bp
+ret
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x0500 - Write character to STDPRN$'
+.msgInfo1$										db 'This function attempts to write to the PRN device - usually the parallel port.$'
+
+
+
+
+
+section .text
 Test1800:
 	push bp
 	mov bp, sp
@@ -475,13 +593,16 @@ Test1800:
 	mov sp, bp
 	pop bp
 ret
-.testing$										db 'Testing interrupt 0x21 AX = 0x1800 - Reserved', 0x0D, 0x0A, '$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.', 0x0D, 0x0A, '$'
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x1800 - Reserved$'
+.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
 
 
 
 
 
+section .text
 Test1D00:
 	push bp
 	mov bp, sp
@@ -520,13 +641,16 @@ Test1D00:
 	mov sp, bp
 	pop bp
 ret
-.testing$										db 'Testing interrupt 0x21 AX = 0x1D00 - Reserved', 0x0D, 0x0A, '$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.', 0x0D, 0x0A, '$'
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x1D00 - Reserved$'
+.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
 
 
 
 
 
+section .text
 Test1E00:
 	push bp
 	mov bp, sp
@@ -565,13 +689,16 @@ Test1E00:
 	mov sp, bp
 	pop bp
 ret
-.testing$										db 'Testing interrupt 0x21 AX = 0x1E00 - Reserved', 0x0D, 0x0A, '$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.', 0x0D, 0x0A, '$'
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x1E00 - Reserved$'
+.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
 
 
 
 
 
+section .text
 Test2000:
 	push bp
 	mov bp, sp
@@ -610,13 +737,333 @@ Test2000:
 	mov sp, bp
 	pop bp
 ret
-.testing$										db 'Testing interrupt 0x21 AX = 0x2000 - Reserved', 0x0D, 0x0A, '$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.', 0x0D, 0x0A, '$'
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x2000 - Reserved$'
+.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
 
 
 
 
 
+section .text
+Test3000:
+	push bp
+	mov bp, sp
+
+	; allocate local variables
+	sub sp, 4
+	%define versionMajor						word [bp - 2]
+	%define versionMinor						word [bp - 4]
+
+
+	push .testing$
+	call Print
+
+	; get DOS version
+	mov ax, 0x3000
+	int 0x21
+
+	; save the version for later
+	mov cx, 0
+	mov cl, al
+	mov versionMajor, cx
+	mov cl, ah
+	mov versionMinor, cx
+
+
+	; determine who the OEM is
+	cmp bh, 0x00
+	jne .Not00
+		push .OEM00
+		jmp .PrintOEM
+	.Not00:
+
+	cmp bh, 0x01
+	jne .Not01
+		push .OEM01
+		jmp .PrintOEM
+	.Not01:
+
+	cmp bh, 0x02
+	jne .Not02
+		push .OEM02
+		jmp .PrintOEM
+	.Not02:
+
+	cmp bh, 0x04
+	jne .Not04
+		push .OEM04
+		jmp .PrintOEM
+	.Not04:
+
+	cmp bh, 0x05
+	jne .Not05
+		push .OEM05
+		jmp .PrintOEM
+	.Not05:
+
+	cmp bh, 0x06
+	jne .Not06
+		push .OEM06
+		jmp .PrintOEM
+	.Not06:
+
+	cmp bh, 0x07
+	jne .Not07
+		push .OEM07
+		jmp .PrintOEM
+	.Not07:
+
+	cmp bh, 0x08
+	jne .Not08
+		push .OEM08
+		jmp .PrintOEM
+	.Not08:
+
+	cmp bh, 0x09
+	jne .Not09
+		push .OEM09
+		jmp .PrintOEM
+	.Not09:
+
+	cmp bh, 0x0A
+	jne .Not0A
+		push .OEM0A
+		jmp .PrintOEM
+	.Not0A:
+
+	cmp bh, 0x0B
+	jne .Not0B
+		push .OEM0B
+		jmp .PrintOEM
+	.Not0B:
+
+	cmp bh, 0x0C
+	jne .Not0C
+		push .OEM0C
+		jmp .PrintOEM
+	.Not0C:
+
+	cmp bh, 0x0D
+	jne .Not0D
+		push .OEM0D
+		jmp .PrintOEM
+	.Not0D:
+
+	cmp bh, 0x0E
+	jne .Not0E
+		push .OEM0E
+		jmp .PrintOEM
+	.Not0E:
+
+	cmp bh, 0x0F
+	jne .Not0F
+		push .OEM0F
+		jmp .PrintOEM
+	.Not0F:
+
+	cmp bh, 0x10
+	jne .Not10
+		push .OEM10
+		jmp .PrintOEM
+	.Not10:
+
+	cmp bh, 0x16
+	jne .Not16
+		push .OEM16
+		jmp .PrintOEM
+	.Not16:
+
+	cmp bh, 0x17
+	jne .Not17
+		push .OEM17
+		jmp .PrintOEM
+	.Not17:
+
+	cmp bh, 0x23
+	jne .Not23
+		push .OEM23
+		jmp .PrintOEM
+	.Not23:
+
+	cmp bh, 0x28
+	jne .Not28
+		push .OEM28
+		jmp .PrintOEM
+	.Not28:
+
+	cmp bh, 0x29
+	jne .Not29
+		push .OEM29
+		jmp .PrintOEM
+	.Not29:
+
+	cmp bh, 0x33
+	jne .Not33
+		push .OEM33
+		jmp .PrintOEM
+	.Not33:
+
+	cmp bh, 0x34
+	jne .Not34
+		push .OEM34
+		jmp .PrintOEM
+	.Not34:
+
+	cmp bh, 0x35
+	jne .Not35
+		push .OEM35
+		jmp .PrintOEM
+	.Not35:
+
+	cmp bh, 0x4D
+	jne .Not4D
+		push .OEM4D
+		jmp .PrintOEM
+	.Not4D:
+
+	cmp bh, 0x5E
+	jne .Not5E
+		push .OEM5E
+		jmp .PrintOEM
+	.Not5E:
+
+	cmp bh, 0x66
+	jne .Not66
+		push .OEM66
+		jmp .PrintOEM
+	.Not66:
+
+	cmp bh, 0x88
+	jne .Not88
+		push .OEM88
+		jmp .PrintOEM
+	.Not88:
+
+	cmp bh, 0x99
+	jne .Not99
+		push .OEM99
+		jmp .PrintOEM
+	.Not99:
+
+	cmp bh, 0xCD
+	jne .NotCD
+		push .OEMCD
+		jmp .PrintOEM
+	.NotCD:
+
+	cmp bh, 0xED
+	jne .NotED
+		push .OEMED
+		jmp .PrintOEM
+	.NotED:
+
+	cmp bh, 0xEE
+	jne .NotEE
+		push .OEMEE
+		jmp .PrintOEM
+	.NotEE:
+
+	cmp bh, 0xEF
+	jne .NotEF
+		push .OEMEF
+		jmp .PrintOEM
+	.NotEF:
+
+	cmp bh, 0xFD
+	jne .NotFD
+		push .OEMFD
+		jmp .PrintOEM
+	.NotFD:
+
+	cmp bh, 0xFF
+	jne .NotFF
+		push .OEMFF
+		jmp .PrintOEM
+	.NotFF:
+
+	; if we get here, there's an undefined OEM afoot!
+	push .OEMUndefined
+
+	.PrintOEM:
+	push .msgOutput1$
+	call PrintNoCRLF
+
+	call Print
+
+
+	; print version number
+	push 80
+	push temp$
+	push .msgOutput2$
+	call MemCopy
+
+	push word 0
+	push versionMajor
+	push temp$
+	call StringTokenDecimal
+
+	push word 2
+	push versionMinor
+	push temp$
+	call StringTokenDecimal
+
+	push temp$
+	call Print
+
+
+	.Exit:
+	mov sp, bp
+	pop bp
+ret
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x3000 - Get DOS version$'
+.msgOutput1$									db 'Reported OEM is $'
+.msgOutput2$									db 'Reported version is ^.^$', 0
+.OEM00											db 'IBM$'
+.OEM01											db 'Compaq$'
+.OEM02											db 'MS Packaged Product$'
+.OEM04											db 'AT&T$'
+.OEM05											db 'ZDS (Zenith Electronics)$'
+.OEM06											db 'Hewlett Packard$'
+.OEM07											db 'Zenith Data Systems (ZDS, Groupe Bull), for DOS 5.0+$'
+.OEM08											db 'Tandon$'
+.OEM09											db 'AST Europe Limited$'
+.OEM0A											db 'Asem$'
+.OEM0B											db 'Hantarex$'
+.OEM0C											db 'SystemsLine$'
+.OEM0D											db 'Packard Bell$'
+.OEM0E											db 'Intercomp$'
+.OEM0F											db 'Unibit$'
+.OEM10											db 'Unidata$'
+.OEM16											db 'DEC$'
+.OEM17											db 'Olivetti DOS$'
+.OEM23											db 'Olivetti$'
+.OEM28											db 'Texas Instruments$'
+.OEM29											db 'Toshiba$'
+.OEM33											db 'Novell$'
+.OEM34											db 'MS Multimedia Systems$'
+.OEM35											db 'MS Multimedia Systems$'
+.OEM4D											db 'Hewlett-Packard$'
+.OEM5E											db 'RxDOS$'
+.OEM66											db 'PTS-DOS$'
+.OEM88											db 'Night Kernel$'
+.OEM99											db 'General Software Embedded DOS$'
+.OEMCD											db 'Paragon Technology Systems Corporation (Source DOS S/DOS 1.0+)$'
+.OEMED											db 'OpenDOS/DR-DOS$'
+.OEMEE											db 'DR DOS$'
+.OEMEF											db 'Novell DOS$'
+.OEMFD											db 'FreeDOS$'
+.OEMFF											db 'Microsoft, Phoenix (listed as undefined by Microsoft)$'
+.OEMUndefined									db 'Undefined'
+
+
+
+
+
+section .text
 Test6100:
 	push bp
 	mov bp, sp
@@ -655,13 +1102,16 @@ Test6100:
 	mov sp, bp
 	pop bp
 ret
-.testing$										db 'Testing interrupt 0x21 AX = 0x6100 - Reserved for network use', 0x0D, 0x0A, '$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.', 0x0D, 0x0A, '$'
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x6100 - Reserved for network use$'
+.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
 
 
 
 
 
+section .text
 Test6B00:
 	push bp
 	mov bp, sp
@@ -700,13 +1150,16 @@ Test6B00:
 	mov sp, bp
 	pop bp
 ret
-.testing$										db 'Testing interrupt 0x21 AX = 0x6B00 - Reserved', 0x0D, 0x0A, '$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.', 0x0D, 0x0A, '$'
+
+section .data
+.testing$										db 'Testing interrupt 0x21 AX = 0x6B00 - Reserved$'
+.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
 
 
 
 
 
+section .text
 TestRegisterSetsMatch:
 	; Checks the two sets of registers already pushed to the stack Inserts a character into the keyboard buffer
 	;
@@ -774,6 +1227,7 @@ ret 32
 
 
 
+section .text
 TraitAll:
 	; Adds one to all trait counters
 	;
@@ -834,6 +1288,7 @@ ret
 
 
 
+section .text
 TraitMSDOS1:
 	; Adds one to all trait counters for MS-DOS 1.xx
 	;
@@ -863,6 +1318,7 @@ ret
 
 
 
+section .text
 TraitMSDOS2:
 	; Adds one to all trait counters for MS-DOS 2.xx
 	;
@@ -893,6 +1349,7 @@ ret
 
 
 
+section .text
 TraitMSDOS3:
 	; Adds one to all trait counters for MS-DOS 3.xx
 	;
@@ -926,6 +1383,7 @@ ret
 
 
 
+section .text
 TraitMSDOS4:
 	; Adds one to all trait counters for MS-DOS 4.xx (but not MS-DOS 4.0 Multitasking)
 	;
@@ -953,6 +1411,7 @@ ret
 
 
 
+section .text
 TraitMSDOS5:
 	; Adds one to all trait counters for MS-DOS 5.xx
 	;
@@ -980,6 +1439,7 @@ ret
 
 
 
+section .text
 TraitMSDOS6:
 	; Adds one to all trait counters for MS-DOS 6.xx
 	;
@@ -1008,6 +1468,7 @@ ret
 
 
 
+section .text
 TraitMSDOS7:
 	; Adds one to all trait counters for MS-DOS 7.xx
 	;
