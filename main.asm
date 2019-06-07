@@ -29,7 +29,7 @@ org 0x0100
 ; defines...
 %define true									1
 %define false									0
-%define BUILD 130
+%define BUILD 138
 
 
 
@@ -79,6 +79,15 @@ main:
 
 	call PrintCRLF2
 	call Test0600FF
+
+	call PrintCRLF2
+	call Test0700
+
+	call PrintCRLF2
+	call Test0800
+
+	call PrintCRLF2
+	call Test0900
 
 ;	call PrintCRLF2
 ;	call Test1800
@@ -279,7 +288,7 @@ Test0100:
 		push msgTestFailed$
 		call Print
 
-		push .msgFailInfo2$
+		push .msgFailInfo1$
 		call Print 
 
 		jmp .Exit
@@ -300,7 +309,7 @@ Test0100:
 		push msgTestFailed$
 		call Print
 
-		push .msgFailInfo2$
+		push .msgFailInfo1$
 		call Print 
 
 		jmp .Exit
@@ -319,8 +328,7 @@ ret
 
 section .data
 .testing$										db 'Testing interrupt 0x21, AX = 0x0100 (Read char from STDIN with echo)$'
-.msgFailInfo1$									db 'A key was returned when there should have been none.$'
-.msgFailInfo2$									db 'The key returned was not the one provided.$'
+.msgFailInfo1$									db 'The key returned was not the one provided.$'
 
 
 
@@ -802,6 +810,191 @@ section .data
 .msgInfo3$										db 'input is available.$'
 .msgInfo4$										db 'The zero flag should be clear when input is available.$'
 .msgInfo5$										db 'The ASCII code of the character read should be returned in AL.$'
+
+
+
+
+
+Test0700:
+	push bp
+	mov bp, sp
+
+
+	push .testing$
+	call Print
+
+	; clear the buffer
+	call KeyboardBufferClear
+
+	; push an "A" into the keyboard buffer
+	push 65
+	call KeyboardBufferInsert
+
+	; see if we get a key back - this time we should get an "A"
+	mov ax, 0x0700
+	int 0x21
+
+	cmp al, 65
+	je .Check2
+		; if we get here, it wasn't an "A" we got back...
+		push msgTestFailed$
+		call Print
+
+		push .msgFailInfo1$
+		call Print 
+
+		jmp .Exit
+
+	.Check2:
+	; push a "B" into the keyboard buffer
+	push 66
+	call KeyboardBufferInsert
+
+	; now we should get a "B" back
+	mov ax, 0x0700
+	int 0x21
+
+	cmp al, 66
+	je .Passed
+		; if we get here, thar be a wrong key
+		push msgTestFailed$
+		call Print
+
+		push .msgFailInfo1$
+		call Print 
+
+		jmp .Exit
+
+	.Passed:
+	push msgTestPassed$
+	call Print
+	call TraitAll
+
+
+	.Exit:
+	mov sp, bp
+	pop bp
+ret
+
+section .data
+.testing$										db 'Testing interrupt 0x21, AX = 0x0700 (Direct character input without echo)$'
+.msgFailInfo1$									db 'The key returned was not the one provided.$'
+
+
+
+
+
+Test0800:
+	push bp
+	mov bp, sp
+
+
+	push .testing$
+	call Print
+
+	; clear the buffer
+	call KeyboardBufferClear
+
+	; push an "A" into the keyboard buffer
+	push 65
+	call KeyboardBufferInsert
+
+	; see if we get a key back - this time we should get an "A"
+	mov ax, 0x0800
+	int 0x21
+
+	cmp al, 65
+	je .Check2
+		; if we get here, it wasn't an "A" we got back...
+		push msgTestFailed$
+		call Print
+
+		push .msgFailInfo1$
+		call Print 
+
+		jmp .Exit
+
+	.Check2:
+	; push a "B" into the keyboard buffer
+	push 66
+	call KeyboardBufferInsert
+
+	; now we should get a "B" back
+	mov ax, 0x0800
+	int 0x21
+
+	cmp al, 66
+	je .Passed
+		; if we get here, thar be a wrong key
+		push msgTestFailed$
+		call Print
+
+		push .msgFailInfo1$
+		call Print 
+
+		jmp .Exit
+
+	.Passed:
+	push msgTestPassed$
+	call Print
+	call TraitAll
+
+
+	.Exit:
+	mov sp, bp
+	pop bp
+ret
+
+section .data
+.testing$										db 'Testing interrupt 0x21, AX = 0x0800 (Console input without echo)$'
+.msgFailInfo1$									db 'The key returned was not the one provided.$'
+
+
+
+
+
+Test0900:
+	push bp
+	mov bp, sp
+
+
+	push .testing$
+	call Print
+
+	push .msgInfo1$
+	call Print
+
+	push .msgInfo2$
+	call Print
+
+	mov ah, 0x09
+	mov dx, .msgInfo3$
+	int 0x21
+
+	cmp al, 0x24
+	jne .Fail
+		; if we get here, success!
+		push msgBehaviourTrue$
+		jmp .Exit
+
+	.Fail:
+	; if we get here, not so much...
+	push msgBehaviourFalse$
+
+	.Exit:
+	call PrintCRLF
+	call Print
+
+
+	mov sp, bp
+	pop bp
+ret
+
+section .data
+.testing$										db 'Testing interrupt 0x21, AX = 0x0900 (Write string to STDOUT)$'
+.msgInfo1$										db 'Although this function returns nothing officially, multiple DOS implementations$'
+.msgInfo2$										db '(at least MS-DOS 2.10 through 8.00 and FreeDOS) have been observed to return$'
+.msgInfo3$										db 'the ASCII code 24 (the string terminator) in AL.$'
 
 
 
