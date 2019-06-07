@@ -29,7 +29,7 @@ org 0x0100
 ; defines...
 %define true									1
 %define false									0
-%define BUILD 138
+%define BUILD 146
 
 
 
@@ -92,6 +92,9 @@ main:
 ;	call PrintCRLF2
 ;	call Test1800
 ;
+	call PrintCRLF2
+	call Test1900
+
 ;	call PrintCRLF2
 ;	call Test1D00
 ;
@@ -103,6 +106,9 @@ main:
 ;
 	call PrintCRLF2
 	call Test3000
+
+	call PrintCRLF2
+	call Test3307
 
 ;	call PrintCRLF2
 ;	call Test6100
@@ -1048,6 +1054,52 @@ section .data
 
 
 section .text
+Test1900:
+	push bp
+	mov bp, sp
+
+	; allocate local variables
+	sub sp, 2
+	%define functionResult						word [bp - 2]
+
+
+	push .testing$
+	call Print
+
+	mov ax, 0x1900
+	int 0x21
+	mov functionResult, ax
+
+	push 80
+	push temp$
+	push .result$
+	call MemCopy
+
+	push word 3
+	mov ax, functionResult
+	mov ah, 0
+	push ax
+	push temp$
+	call StringTokenDecimal
+
+	push temp$
+	call Print
+
+
+	.Exit:
+	mov sp, bp
+	pop bp
+ret
+
+section .data
+.testing$										db 'Testing interrupt 0x21, AX = 0x1900 (Get default drive)$'
+.result$										db 'Drive number returned: ^$', 0
+
+
+
+
+
+section .text
 Test1D00:
 	push bp
 	mov bp, sp
@@ -1500,6 +1552,82 @@ section .data
 .OEMFD											db 'FreeDOS$'
 .OEMFF											db 'Microsoft, Phoenix (listed as undefined by Microsoft)$'
 .OEMUndefined									db 'Undefined'
+
+
+
+
+
+section .text
+Test3307:
+	push bp
+	mov bp, sp
+
+	; allocate local variables
+	sub sp, 2
+	%define functionResult						word [bp - 2]
+
+
+	push .testing$
+	call Print
+
+	push .msgInfo1$
+	call Print
+
+	push .msgInfo2$
+	call Print
+
+	mov eax, 0x3307
+	mov ebx, 0x0000
+	mov ecx, 0x0000
+	mov edx, 0x0001
+	mov esi, 0x0000
+	mov edi, 0x0000
+	int 0x21
+	mov ah, 0
+	mov functionResult, ax
+
+
+	; print result
+	push 80
+	push temp$
+	push .msgResult$
+	call MemCopy
+
+	push word 2
+	push functionResult
+	push temp$
+	call StringTokenHexadecimal
+
+	push temp$
+	call Print
+
+
+	; update the trait counters
+	cmp functionResult, 0x07
+	jne .Not07
+		; if we get here, the int returned 0x07 in AL, seemingly indicating the function is supported
+		inc word [traitMSDOS710]
+		inc word [traitMSDOS800]
+	.Not07:
+
+	cmp functionResult, 0xFF
+	jne .NotFF
+		; if we get here, the int returned 0xFF in AL... perhaps the function is not supported
+		inc word [traitMSDOS622]
+		inc word [traitFreeDOS]
+	.NotFF:
+
+
+	.Exit:
+	mov sp, bp
+	pop bp
+ret
+
+section .data
+.testing$										db 'Testing interrupt 0x21, AX = 0x3307 (Set / clear DOS_Flag)$'
+.msgInfo1$										db 'This function has been observed to return 0xFF in AL on MS-DOS 6.22 and FreeDOS$'
+.msgInfo2$										db 'and 0x07 in MS-DOS 7.10 and 8.00.$'
+.msgResult$										db 'This DOS returned 0x^$', 0
 
 
 
