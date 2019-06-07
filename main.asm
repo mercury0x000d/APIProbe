@@ -29,7 +29,7 @@ org 0x0100
 ; defines...
 %define true									1
 %define false									0
-%define BUILD 95
+%define BUILD 130
 
 
 
@@ -65,14 +65,20 @@ main:
 	call PrintCRLF2
 	call Test0200
 
-	call PrintCRLF2
-	call Test0300
+;	call PrintCRLF2
+;	call Test0300
+
+;	call PrintCRLF2
+;	call Test0400
+
+;	call PrintCRLF2
+;	call Test0500
 
 	call PrintCRLF2
-	call Test0400
+	call Test0600
 
 	call PrintCRLF2
-	call Test0500
+	call Test0600FF
 
 ;	call PrintCRLF2
 ;	call Test1800
@@ -100,14 +106,29 @@ main:
 	; testing is all done!
 	call PrintCRLF
 
-	push .goodbye$
+	push .goodbye1$
 	call Print
+
+	push .goodbye2$
+	call Print
+	call PrintCRLF
+
+	; attempt to exit via DOS
+	mov ax, 0x0000
+	int 0x21
+
+	; if we get here, that didn't work so we can simply RET instead
+	push .goodbye3$
+	call Print
+	call PrintCRLF
 ret
 
 section .data
 .greeting1$										db 'APIProbe     DOS API Compatibility Tester$'
-.greeting2$										db '1.0.^      Copyright 2019 by Mercury0x0D$', 0
-.goodbye$										db 'Testing complete.$'
+.greeting2$										db '0.1.^      Copyright 2019 by Mercury0x0D$', 0
+.goodbye1$										db 'Testing complete.$'
+.goodbye2$										db 'Exiting with interrupt 0x21, AX = 0x0000 (Terminate program)$'
+.goodbye3$										db 'It seems that failed, so we', 0x27, 'll just exit the old-fashioned way! (ret)$'
 
 
 
@@ -123,6 +144,9 @@ msgTestFailed$									db 'Function testing failed$'
 msgTestPassed$									db 'Function testing passed$'
 msgDOSMayIntervene$								db 'You may see DOS intervene here if this device is unavailable.$'
 msgFunctionNotCounted$							db 'This function is not counted towards the compatibility totals.$'
+msgBehaviourTrue$								db 'This DOS exhibited this behaviour.$'
+msgBehaviourFalse$								db 'This DOS did not exhibit this behaviour.$'
+msgRegistersChanged$							db 'This function should return immediately, but one or more registers were changed.$'
 
 traitMSDOS110									dw 0x0000
 traitMSDOS111									dw 0x0000
@@ -294,7 +318,7 @@ Test0100:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x0100 - Read char from STDIN with echo$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x0100 (Read char from STDIN with echo)$'
 .msgFailInfo1$									db 'A key was returned when there should have been none.$'
 .msgFailInfo2$									db 'The key returned was not the one provided.$'
 
@@ -396,6 +420,8 @@ Test0200:
 		call TraitMSDOS5
 		call TraitMSDOS6
 		inc word [traitMSDOS700]
+		inc word [traitMSDOS710]
+		inc word [traitMSDOS800]
 		inc word [traitFreeDOS]
 		jmp .CheckTabs
 
@@ -424,6 +450,8 @@ Test0200:
 		call TraitMSDOS5
 		call TraitMSDOS6
 		inc word [traitMSDOS700]
+		inc word [traitMSDOS710]
+		inc word [traitMSDOS800]
 		jmp .Exit
 
 	.FailTabs:
@@ -442,9 +470,9 @@ Test0200:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x0200 - Write character to STDOUT$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x0200 (Write character to STDOUT)$'
 .msgPassInfo1$									db 'Although this function returns nothing officially, multiple DOS implementations$'
-.msgPassInfo2$									db '(at least MS-DOS 2.10 through 7.00) have been observed to contain the ASCII$'
+.msgPassInfo2$									db '(at least MS-DOS 2.10 through 8.00) have been observed to return the ASCII$'
 .msgPassInfo3$									db 'code in AL of the character printed, or ASCII code 32 for tabs.$'
 .msgPassChar$									db 'This DOS successfully exhibited this behaviour for regular characters.$'
 .msgPassTab$									db 'This DOS successfully exhibited this behaviour for tab characters.$'
@@ -464,6 +492,9 @@ Test0300:
 	push .testing$
 	call Print
 
+	push .msgInfo1$
+	call Print
+
 	push msgDOSMayIntervene$
 	call Print
 
@@ -481,7 +512,7 @@ Test0300:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x0300 - Read character from STDAUX$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x0300 (Read character from STDAUX)$'
 .msgInfo1$										db 'This function attempts to read from the AUX device - usually the serial port.$'
 
 
@@ -495,6 +526,9 @@ Test0400:
 
 
 	push .testing$
+	call Print
+
+	push .msgInfo1$
 	call Print
 
 	push msgDOSMayIntervene$
@@ -514,7 +548,7 @@ Test0400:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x0400 - Write character to STDAUX$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x0400 (Write character to STDAUX)$'
 .msgInfo1$										db 'This function attempts to write to the AUX device - usually the serial port.$'
 
 
@@ -528,6 +562,9 @@ Test0500:
 
 
 	push .testing$
+	call Print
+
+	push .msgInfo1$
 	call Print
 
 	push msgDOSMayIntervene$
@@ -547,8 +584,224 @@ Test0500:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x0500 - Write character to STDPRN$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x0500 (Write character to STDPRN)$'
 .msgInfo1$										db 'This function attempts to write to the PRN device - usually the parallel port.$'
+
+
+
+
+
+section .text
+Test0600:
+	push bp
+	mov bp, sp
+
+	; allocate local variables
+	sub sp, 4
+	%define behaviourFlagA						word [bp - 2]
+	%define functionResult						word [bp - 4]
+
+
+	; assume the best
+	mov behaviourFlagA, true
+
+	push .testing$
+	call Print
+
+	push .msgInfo1$
+	call Print
+
+	mov ah, 0x06
+	mov cx, 254
+	.alphaloop:
+		cmp cx, 26
+		je .Matched
+		mov dx, cx
+		pusha
+		int 0x21
+		mov ah, 0
+		mov functionResult, ax
+		popa
+		cmp functionResult, dx
+		je .Matched
+			; if we get here, AL did not contain the character of the character printed
+			mov behaviourFlagA, false
+		.Matched:
+	loop .alphaloop
+
+
+	; now see if the behaviour was as expected
+	call PrintCRLF2
+
+	push .msgPassInfo1$
+	call Print
+
+	push .msgPassInfo2$
+	call Print
+
+	push .msgPassInfo3$
+	call Print
+
+	cmp behaviourFlagA, true
+	jne .Fail
+		; if we get here, this DOS did what a good DOS should
+		push msgBehaviourTrue$
+		call Print
+
+		; set those trait counters
+		inc word [traitMSDOS210]
+		inc word [traitMSDOS211]
+		inc word [traitMSDOS220]
+		inc word [traitMSDOS225]
+		call TraitMSDOS3
+		inc word [traitMSDOS400Multi]
+		call TraitMSDOS4
+		call TraitMSDOS5
+		call TraitMSDOS6
+		inc word [traitMSDOS700]
+		inc word [traitMSDOS710]
+		inc word [traitMSDOS800]
+		inc word [traitFreeDOS]
+		jmp .Exit
+
+	.Fail:
+	; BAD DOS, BAD!
+	push msgBehaviourFalse$
+	call Print
+
+	; set the trait counters
+	call TraitMSDOS1
+	inc word [traitMSDOS200]
+	inc word [traitMSDOS205]
+
+
+	.Exit:
+	mov sp, bp
+	pop bp
+ret
+
+section .data
+.testing$										db 'Testing interrupt 0x21, AX = 0x0600 (Direct console output)$'
+.msgInfo1$										db 'And now, some ASCII for your enjoyment:$'
+.msgPassInfo1$									db 'Although this function returns nothing officially, multiple DOS implementations$'
+.msgPassInfo2$									db '(at least MS-DOS 2.10 through 8.00 and FreeDOS) have been observed to return$'
+.msgPassInfo3$									db 'the ASCII code in AL of the character printed.$'
+
+
+
+
+
+section .text
+Test0600FF:
+	push bp
+	mov bp, sp
+
+	; allocate local variables
+	sub sp, 4
+	%define behaviourFlagA						word [bp - 2]
+	%define functionResult						word [bp - 4]
+
+
+	; assume the best
+	mov behaviourFlagA, true
+
+	push .testing$
+	call Print
+
+
+	push .msgInfo1$
+	call Print
+
+	; clear the buffer
+	call KeyboardBufferClear
+
+	; get input now that we know there is none and see how the function responds
+	mov ax, 0x0600
+	mov dl, 0xFF
+	int 0x21
+	mov behaviourFlagA, ax
+
+	jnz .Check1Fail
+		; if we get here, the zero flag was set, meaning no character was available
+		push msgBehaviourTrue$
+		call Print
+
+		; additionally, check if AL = 0
+		push .msgInfo2$
+		call Print
+
+		push .msgInfo3$
+		call Print
+
+		mov ax, behaviourFlagA
+		cmp al, 0
+		jne .ALFail
+			push msgBehaviourTrue$
+			call Print
+			jmp .Check2
+
+		.ALFail:
+		push msgBehaviourFalse$
+		call Print
+		jmp .Check2
+
+	.Check1Fail:
+	push msgBehaviourFalse$
+	call Print
+
+
+	.Check2:
+	push .msgInfo4$
+	call Print
+
+	; push an "A" into the keyboard buffer
+	push 65
+	call KeyboardBufferInsert
+
+	; see what we get back
+	mov ax, 0x0600
+	mov dl, 0xFF
+	int 0x21
+	mov behaviourFlagA, ax
+
+	jz .Check2Fail
+		; if we get here, the zero flag was not set, meaning a character was available
+		push msgBehaviourTrue$
+		call Print
+
+		; additionally, check if AL = 65
+		push .msgInfo5$
+		call Print
+
+		mov ax, behaviourFlagA
+		cmp al, 65
+		jne .CharacterWrong
+			push msgBehaviourTrue$
+			call Print
+			jmp .Exit
+
+		.CharacterWrong:
+		push msgBehaviourFalse$
+		call Print
+		jmp .Exit
+
+	.Check2Fail:
+	push msgBehaviourFalse$
+	call Print
+
+
+	.Exit:
+	mov sp, bp
+	pop bp
+ret
+
+section .data
+.testing$										db 'Testing interrupt 0x21, AX = 0x0600, DL = FF (Direct console input)$'
+.msgInfo1$										db 'The zero flag should be set when no input is available.$'
+.msgInfo2$										db 'Although the behaviour is undocumented, AL is commonly set to zero when no$'
+.msgInfo3$										db 'input is available.$'
+.msgInfo4$										db 'The zero flag should be clear when input is available.$'
+.msgInfo5$										db 'The ASCII code of the character read should be returned in AL.$'
 
 
 
@@ -585,7 +838,7 @@ Test1800:
 	push msgTestFailed$
 	call Print
 
-	push .msgFailInfo1$
+	push msgRegistersChanged$
 	call Print
 
 
@@ -595,8 +848,7 @@ Test1800:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x1800 - Reserved$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x1800 (Reserved)$'
 
 
 
@@ -633,7 +885,7 @@ Test1D00:
 	push msgTestFailed$
 	call Print
 
-	push .msgFailInfo1$
+	push msgRegistersChanged$
 	call Print
 
 
@@ -643,8 +895,7 @@ Test1D00:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x1D00 - Reserved$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x1D00 (Reserved)$'
 
 
 
@@ -681,7 +932,7 @@ Test1E00:
 	push msgTestFailed$
 	call Print
 
-	push .msgFailInfo1$
+	push msgRegistersChanged$
 	call Print
 
 
@@ -691,8 +942,7 @@ Test1E00:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x1E00 - Reserved$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x1E00 (Reserved)$'
 
 
 
@@ -729,7 +979,7 @@ Test2000:
 	push msgTestFailed$
 	call Print
 
-	push .msgFailInfo1$
+	push msgRegistersChanged$
 	call Print
 
 
@@ -739,8 +989,7 @@ Test2000:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x2000 - Reserved$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x2000 (Reserved)$'
 
 
 
@@ -1019,7 +1268,7 @@ Test3000:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x3000 - Get DOS version$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x3000 (Get DOS version)$'
 .msgOutput1$									db 'Reported OEM is $'
 .msgOutput2$									db 'Reported version is ^.^$', 0
 .OEM00											db 'IBM$'
@@ -1094,7 +1343,7 @@ Test6100:
 	push msgTestFailed$
 	call Print
 
-	push .msgFailInfo1$
+	push msgRegistersChanged$
 	call Print
 
 
@@ -1104,8 +1353,7 @@ Test6100:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x6100 - Reserved for network use$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x6100 (Reserved for network use)$'
 
 
 
@@ -1142,7 +1390,7 @@ Test6B00:
 	push msgTestFailed$
 	call Print
 
-	push .msgFailInfo1$
+	push msgRegistersChanged$
 	call Print
 
 
@@ -1152,8 +1400,7 @@ Test6B00:
 ret
 
 section .data
-.testing$										db 'Testing interrupt 0x21 AX = 0x6B00 - Reserved$'
-.msgFailInfo1$									db 'This function should return immediately, but one or more registers were changed.$'
+.testing$										db 'Testing interrupt 0x21, AX = 0x6B00 (Reserved)$'
 
 
 
